@@ -1,0 +1,10 @@
+server:
+  port: 9089
+spring:
+  datasource:
+    url: jdbc:sqlite:chat.db
+    driver-class-name: org.sqlite.JDBC
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true

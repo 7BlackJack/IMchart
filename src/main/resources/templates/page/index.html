@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IM聊天室</title>
+    <!-- Add necessary CDN links for Vue 3 and Element Plus -->
+    <!-- Import style -->
+    <link rel="stylesheet" href="/css/index.css" />
+    <!-- Import Vue 3 -->
+    <script src="/js/vue.global.js"></script>
+    <!-- Import component library -->
+    <script src="/js/index.full.js"></script>
+    <script src="/js/axios.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+        }
+
+        #app {
+            display: flex;
+            height: 100vh;
+        }
+
+        .room-list {
+            width: 25%;
+            min-width: 200px;
+            background-color: #f0f0f0;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .room-list h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .room-list ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .room-list li {
+            cursor: pointer;
+            padding: 10px;
+            margin-bottom: 5px;
+            background-color: #fff;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .room-list li:hover {
+            background-color: #e0e0e0;
+        }
+
+        .chat-window {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .message-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            max-height: 85%;
+            overflow-y: auto; /* Add this line to enable vertical scrollbar */
+        }
+
+        .message {
+            max-width: 70%;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .my-message {
+            align-self: flex-end;
+            background-color: #95d475;
+            color: #fff;
+        }
+
+        .other-message {
+            align-self: flex-start;
+            background-color: #fff;
+            border: 1px solid #ccc;
+        }
+
+        .message strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .timestamp {
+            font-size: 0.8rem;
+            color: #777;
+        }
+
+        .message strong {
+            color: #333;
+        }
+
+        .input-container {
+            width: 100%;
+            display: flex;
+            padding: 10px;
+            box-sizing: border-box; /* Added box-sizing */
+            background-color: #fff;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+            position: absolute;
+            bottom: 0;
+        }
+
+        .input-box {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .send-button {
+            background-color: #409EFF;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .send-button:hover {
+            background-color: #3080E8;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .sidebar-footer a {
+            margin-top: 10px;
+            padding: 5px 10px;
+            background-color: #409EFF;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .sidebar-footer a:hover {
+            background-color: #3080E8;
+        }
+
+        dialog{
+            width: 400px;
+            height: 330px;
+            border: 1px solid #f0f0f0;
+            border-radius: 20px;
+        }
+        .content{
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="room-list">
+        <h2>房间列表</h2>
+        <ul>
+            <li v-for="(room, index) in roomList" :key="index" @click="selectRoom(room.id)">
+                {{ room.name }}({{room.limitNum}}人)--By:{{room.masterName}}
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <a href="#" @click="createRoom">创建房间</a>
+            <a href="#" @click="refreshRoomList">刷新房间列表</a>
+            <a href="#" @click="logout">退出登录</a>
+        </div>
+    </div>
+
+    <div class="chat-window">
+        <h2>{{ currentRoomName }}</h2>
+        <div class="message-container">
+            <div v-for="(message, index) in chatMessages" :key="index" class="message" :class="{ 'my-message': message.userId === currentUserId, 'other-message': message.userId !== currentUserId }">
+                <strong>{{ message.userName }}</strong>
+                <p>{{ message.content }}</p>
+                <div class="timestamp">{{ message.createTime }}</div>
+            </div>
+        </div>
+        <div class="input-container" style="margin-left: -20px;">
+            <el-input class="input-box"  :autosize="{ minRows: 1, maxRows: 10 }"
+                      type="textarea" v-model="newMessage" placeholder="请输入你的消息内容"></el-input>
+            <el-button class="send-button" @click="sendMessage">发送</el-button>
+        </div>
+    </div>
+
+    <dialog id="create-dialog">
+        <h2>创建房间</h2>
+        <div class="content">
+            <el-form>
+                <el-form-item label="房间名">
+                    <el-input v-model="name" placeholder="房间名"></el-input>
+                </el-form-item>
+
+                <el-form-item label="房间密码">
+                    <el-input v-model="pass" placeholder="密码"></el-input>
+                </el-form-item>
+
+                <el-form-item label="人数限制">
+                    <el-input v-model="limitNum" placeholder="最多加入人数(至少2个)"></el-input>
+                </el-form-item>
+
+                <el-form-item>
+                    <el-button type="primary" @click="submitForm">确定创建</el-button>
+                    <el-button @click="closePopup">关闭</el-button>
+                </el-form-item>
+            </el-form>
+        </div>
+    </dialog>
+
+    <dialog id="join-dialog">
+        <h2>加入房间</h2>
+        <div class="content">
+            <el-form>
+                <el-form-item label="房间名">
+                    <el-input v-model="name" placeholder="房间名" :readonly="true"></el-input>
+                </el-form-item>
+
+                <el-form-item label="房间密码">
+                    <el-input v-model="pass" placeholder="密码"></el-input>
+                </el-form-item>
+
+                <el-form-item>
+                    <el-button type="primary" @click="joinRoom">进入</el-button>
+                    <el-button @click="closePopup">关闭</el-button>
+                </el-form-item>
+            </el-form>
+        </div>
+    </dialog>
+</div>
+</div>
+
+<script>
+    const { ref } = Vue;
+    const { ElMessage } = ElementPlus;
+    const app = Vue.createApp({
+        data() {
+            return {
+                roomList: [
+                ],
+                currentRoom: 0,
+                currentRoomName: '请选择房间',
+                currentUserId: [[${user_id}]],
+                currentUser: '[[${user}]]',
+                chatMessages: [
+                    { user: 'User1', content: 'Hello!', timestamp: '10:00 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
+                    // Add more messages as needed
+                ],
+                newMessage: '',
+                isPopupVisible:false,
+            };
+        },
+        methods: {
+            selectRoom(roomId) {
+                this.currentRoom = roomId;
+                this.currentRoomName = this.roomList.find(room => room.id === roomId).name;
+
+                // 获取聊天记录
+                this.getMessageList();
+            },
+            sendMessage() {
+                if (this.newMessage.trim() !== '') {
+                    this.chatMessages.push({
+                        user: 'CurrentUser',
+                        content: this.newMessage,
+                        timestamp: new Date().toLocaleTimeString(),
+                    });
+                    this.newMessage = '';
+                }
+            },
+            createRoom(){
+                console.log("弹窗")
+                const dialog = document.getElementById("create-dialog");
+                dialog.showModal();
+            },
+            closePopup() {
+                const dialog = document.getElementById("create-dialog");
+                dialog.close();
+            },
+            logout() {
+
+            },
+            submitForm() {
+                // Implement your form submission logic here
+                console.log('Form submitted!');
+                this.closePopup(); // Close the popup after form submission if needed
+            },
+            refreshRoomList() {
+                // 开始请求
+                axios({
+                    method: 'get',
+                    url: `/room/list`,
+                }).then(res => {
+                    if (res.data.code == 200) {
+                        ElMessage({
+                            message: '获取房间列表成功',
+                            type: 'success',
+                        })
+                        this.roomList = res.data.data;
+                    } else {
+                        ElMessage({
+                            message: '获取房间列表失败:' + res.data.message,
+                            type: 'error',
+                        })
+                    }
+                });
+            },
+            getMessageList() {
+                // 开始请求
+                axios({
+                    method: 'get',
+                    url: `/message/room/${this.currentRoom}`,
+                }).then(res => {
+                    if (res.data.code == 200) {
+                        ElMessage({
+                            message: '获取聊天记录成功',
+                            type: 'success',
+                        })
+                        this.chatMessages = res.data.data;
+                    } else {
+                        ElMessage({
+                            message: '获取聊天记录失败:' + res.data.message,
+                            type: 'error',
+                        })
+                    }
+                });
+            }
+        },
+        mounted() {
+            // 获取房间
+            this.refreshRoomList();
+        },
+    });
+
+    // 注册 Element Plus 组件
+    app.use(ElementPlus);
+    app.mount('#app');
+</script>
+</body>
+</html>

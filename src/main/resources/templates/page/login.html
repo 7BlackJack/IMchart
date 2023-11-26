@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户登录</title>
+    <!-- Import style -->
+    <link rel="stylesheet" href="/css/index.css" />
+    <!-- Import Vue 3 -->
+    <script src="/js/vue.global.js"></script>
+    <!-- Import component library -->
+    <script src="/js/index.full.js"></script>
+    <script src="/js/axios.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+
+<div id="loginApp" style="width: 50%; max-width: 520px;">
+    <el-container>
+        <el-main class="login-container">
+            <el-card>
+                <h2 class="title">用户登录</h2>
+                <el-form :model="loginForm" :rules="loginRules" ref="loginForm" label-position="top">
+                    <el-form-item label="用户名" prop="username">
+                        <el-input v-model="loginForm.username" autocomplete="off" clearable></el-input>
+                    </el-form-item>
+                    <el-form-item label="密码" prop="password">
+                        <el-input type="password" v-model="loginForm.password" autocomplete="off" clearable></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="login">登录</el-button>
+                        <a href="/register" style="margin-left: 2rem;">去注册</a>
+                    </el-form-item>
+                </el-form>
+            </el-card>
+        </el-main>
+    </el-container>
+</div>
+
+<script>
+    const { ElMessage } = ElementPlus;
+    const app = Vue.createApp({
+        data() {
+            return {
+                loginForm: {
+                    username: '',
+                    password: ''
+                },
+                loginRules: {
+                    username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+                    password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+                }
+            };
+        },
+        methods: {
+            login() {
+                this.$refs.loginForm.validate(valid => {
+                    if (valid) {
+                        // 处理登录逻辑
+                        // 开始请求
+                        axios({
+                            method: 'post',
+                            url: `/login`,
+                            data: this.loginForm,
+                        }).then(res => {
+                            if (res.data.code == 200) {
+                                ElMessage({
+                                    message: '登录成功',
+                                    type: 'success',
+                                    duration: 1500,
+                                    onClose: () => {
+                                        // 跳转到主页
+                                        window.location.href = "/";
+                                    }
+                                })
+                                console.log(res.data);
+                            } else {
+                                ElMessage({
+                                    message: '登录失败:' + res.data.message,
+                                    type: 'error',
+                                })
+                                // 刷新验证码
+                                this.refreshCaptcha();
+                            }
+                        });
+                    }
+                });
+            }
+        }
+    });
+
+    // 注册 Element Plus 组件
+    app.use(ElementPlus);
+
+    // 创建挂载点并挂载Vue实例
+    app.mount('#loginApp');
+</script>
+
+</body>
+</html>
