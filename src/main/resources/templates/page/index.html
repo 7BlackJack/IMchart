@@ -199,7 +199,6 @@
             <el-button class="send-button" @click="sendMessage">发送</el-button>
             <el-button class="send-button" @click="startRecording">开始录音</el-button>
             <el-button class="send-button" @click="stopRecording">停止录音</el-button>
-            <el-button class="send-button" @click="playRecording">播放</el-button>
         </div>
     </div>
 
@@ -208,15 +207,15 @@
         <div class="content">
             <el-form>
                 <el-form-item label="房间名">
-                    <el-input v-model="name" placeholder="房间名"></el-input>
+                    <el-input v-model="roomObj.name" placeholder="房间名"></el-input>
                 </el-form-item>
 
                 <el-form-item label="房间密码">
-                    <el-input v-model="pass" placeholder="密码"></el-input>
+                    <el-input v-model="roomObj.pass" placeholder="密码"></el-input>
                 </el-form-item>
 
                 <el-form-item label="人数限制">
-                    <el-input v-model="limitNum" placeholder="最多加入人数(至少2个)"></el-input>
+                    <el-input v-model="roomObj.limitNum" placeholder="最多加入人数(至少2个)"></el-input>
                 </el-form-item>
 
                 <el-form-item>
@@ -232,11 +231,11 @@
         <div class="content">
             <el-form>
                 <el-form-item label="房间名">
-                    <el-input v-model="name" placeholder="房间名" :readonly="true"></el-input>
+                    <el-input v-model="roomObj.name" placeholder="房间名" :readonly="true"></el-input>
                 </el-form-item>
 
                 <el-form-item label="房间密码">
-                    <el-input v-model="pass" placeholder="密码"></el-input>
+                    <el-input v-model="roomObj.pass" placeholder="密码"></el-input>
                 </el-form-item>
 
                 <el-form-item>
@@ -255,6 +254,11 @@
     const app = Vue.createApp({
         data() {
             return {
+                roomObj:{
+                    name: "",
+                    pass: "",
+                    limitNum: 2,
+                },
                 roomList: [
                 ],
                 currentRoom: 0,
@@ -416,13 +420,6 @@
                     });
                 });
 
-            },
-            playRecording() {
-                const audioBlob = new Blob(this.recordedChunks, { type: 'audio/webm' });
-                const audioUrl = URL.createObjectURL(audioBlob);
-
-                const audio = new Audio(audioUrl);
-                audio.play();
             },
         },
         mounted() {
