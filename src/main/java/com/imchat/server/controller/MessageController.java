@@ -9,6 +9,7 @@ import com.imchat.server.service.ChatUserService;
 import com.imchat.server.util.ThreadLocalUtil;
 import com.imchat.server.vo.MessageVo;
 import com.imchat.server.vo.ResponseVo;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -28,13 +29,12 @@ import java.util.List;
 @RestController
 @Slf4j
 @RequestMapping("message")
+@RequiredArgsConstructor
 public class MessageController {
 
-    @Autowired
-    private ChatMessageService chatMessageService;
+    private final ChatMessageService chatMessageService;
 
-    @Autowired
-    private ChatUserService userService;
+    private final ChatUserService userService;
 
 
 

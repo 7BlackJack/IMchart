@@ -12,6 +12,7 @@ import com.imchat.server.vo.ResponseVo;
 import com.imchat.server.websocket.WebsocketService;
 import com.wf.captcha.GifCaptcha;
 import com.wf.captcha.base.Captcha;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -35,10 +36,15 @@ import java.util.Map;
  */
 @Controller
 @Slf4j
+@RequiredArgsConstructor
 public class IndexController {
 
-    @Autowired
-    private ChatUserService userService;
+    private final ChatUserService userService;
+
+    @RequestMapping("test")
+    public String test() {
+        return "test";
+    }
 
     @GetMapping({"/","/index"})
     public String index(Model model) {

@@ -12,6 +12,7 @@ import com.imchat.server.service.ChatUserService;
 import com.imchat.server.util.ThreadLocalUtil;
 import com.imchat.server.vo.ResponseVo;
 import com.imchat.server.vo.RoomVo;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -31,16 +32,12 @@ import java.util.List;
 @Controller
 @Slf4j
 @RequestMapping("/room/")
+@RequiredArgsConstructor
 public class RoomController {
 
-    @Autowired
-    private ChatRoomService chatRoomService;
-
-    @Autowired
-    private ChatRoomUserService chatRoomUserService;
-
-    @Autowired
-    private ChatUserService userService;
+    private final ChatRoomService chatRoomService;
+    private final ChatRoomUserService chatRoomUserService;
+    private final ChatUserService userService;
 
     /**
      * 创建房间

@@ -197,6 +197,9 @@
             <el-input class="input-box"  :autosize="{ minRows: 1, maxRows: 10 }"
                       type="textarea" v-model="newMessage" placeholder="请输入你的消息内容"></el-input>
             <el-button class="send-button" @click="sendMessage">发送</el-button>
+            <el-button class="send-button" @click="startRecording">开始录音</el-button>
+            <el-button class="send-button" @click="stopRecording">停止录音</el-button>
+            <el-button class="send-button" @click="playRecording">播放</el-button>
         </div>
     </div>
 
@@ -245,7 +248,7 @@
     </dialog>
 </div>
 </div>
-
+<audio></audio>
 <script>
     const { ref } = Vue;
     const { ElMessage } = ElementPlus;
@@ -280,6 +283,8 @@
                 ],
                 newMessage: '',
                 isPopupVisible:false,
+                mediaRecorder:null,
+                recordedChunks: [],
             };
         },
         methods: {
@@ -356,7 +361,69 @@
                         })
                     }
                 });
-            }
+            },
+            // 录音
+            startRecording() {
+                let _this = this;
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(function(stream) {
+                        _this.mediaRecorder = new MediaRecorder(stream);
+                        _this.mediaRecorder.start();
+
+                        _this.mediaRecorder.addEventListener('dataavailable', function(e) {
+                            _this.recordedChunks.push(e.data);
+                        });
+                    })
+                    .catch(function(err) {
+                        console.log('无法访问麦克风:', err);
+                    });
+            },
+            stopRecording() {
+                let _this = this;
+                _this.mediaRecorder.stop();
+
+                _this.mediaRecorder.addEventListener('stop', function() {
+                    const audioBlob = new Blob(_this.recordedChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+
+                    const uploadForm = new FormData();
+                    console.log(audioUrl)
+                    uploadForm.append('audio', audioBlob, 'recorded_audio.webm');
+
+                    axios({
+                        method: 'post',
+                        url: `/upload/audio`,
+                        data: uploadForm,
+                        headers: {
+                            "Content-Type" : "multipart/form-data",
+                        }
+                    }).then(res => {
+                        if (res.data.code == 200) {
+                            ElMessage({
+                                message: '音频上传成功',
+                                type: 'success',
+                            })
+                            setTimeout(() => {
+                                const audio = new Audio(res.data.data.url);
+                                audio.play();
+                            },3000);
+                        } else {
+                            ElMessage({
+                                message: '音频上传失败:' + res,
+                                type: 'error',
+                            })
+                        }
+                    });
+                });
+
+            },
+            playRecording() {
+                const audioBlob = new Blob(this.recordedChunks, { type: 'audio/webm' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+
+                const audio = new Audio(audioUrl);
+                audio.play();
+            },
         },
         mounted() {
             // 获取房间
