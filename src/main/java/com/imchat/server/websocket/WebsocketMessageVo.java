@@ -32,6 +32,11 @@ public class WebsocketMessageVo {
     private Integer userId;
 
     /**
+     * 发送者名字
+     */
+    private String userName;
+
+    /**
      * 接收者ID
      */
     private Integer toId;

@@ -2,7 +2,9 @@ package com.imchat.server.websocket;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.imchat.server.entity.ChatMessage;
 import com.imchat.server.entity.ChatUser;
+import com.imchat.server.service.ChatMessageService;
 import com.imchat.server.service.ChatUserService;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -49,12 +51,18 @@ public class WebsocketService {
     private static final String HEARTBEAT_PACKETS = "hearting";
 
     private static ChatUserService userService;
+    private static ChatMessageService messageService;
     private String token;
     private ChatUser currentUser;
 
     @Autowired
     private void setChatUserService(ChatUserService service) {
         userService = service;
+    }
+
+    @Autowired
+    private void setChatMessageService(ChatMessageService chatMessageService) {
+        messageService = chatMessageService;
     }
 
     /**
@@ -68,6 +76,10 @@ public class WebsocketService {
         // 群存在
         Set<Integer> members = roomList.get(roomId);
         for (Integer member : members) {
+            // 跳过自己
+            if (this.session.equals(sessionPools.get(member))) {
+                continue;
+            }
             // 群发消息
             sendMessage(sessionPools.get(member),message);
         }
@@ -143,7 +155,7 @@ public class WebsocketService {
     @OnMessage
     public void onMessage(String message) throws IOException{
         if (HEARTBEAT_PACKETS.equals(message)) {
-            log.debug("[消息订阅] - 心跳.");
+            log.info("[消息订阅] - 心跳.");
             return;
         }
         // 判断是否登录
@@ -157,10 +169,21 @@ public class WebsocketService {
          */
         ObjectMapper objectMapper = new ObjectMapper();
         WebsocketMessageVo msg = objectMapper.readValue(message, WebsocketMessageVo.class);
+        // 加上用户名
+        msg.setUserName(this.currentUser.getUsername());
         switch (msg.getAction()) {
             case 0:
                 // 发送消息
                 msg.setDate(new Date());
+                // 存到聊天记录中
+                ChatMessage chatMessage = new ChatMessage();
+                chatMessage.setType(msg.getType());
+                chatMessage.setContent(msg.getContent());
+                chatMessage.setRoomId(msg.getRoomId());
+                chatMessage.setToId(msg.getToId());
+                chatMessage.setUserId(this.currentUser.getId());
+                chatMessage.setCreateTime(msg.getDate());
+                messageService.save(chatMessage);
                 if (msg.getRoomId() > 0) {
                     // 群发
                     broadcast(msg.getRoomId(), objectMapper.writeValueAsString(msg));
@@ -176,6 +199,7 @@ public class WebsocketService {
                     msg.setUserId(0);
                     msg.setContent("房间号非法");
                     msg.setDate(new Date());
+                    msg.setType(-2);
                     session.getBasicRemote().sendText(objectMapper.writeValueAsString(msg));
                     return;
                 }
@@ -195,6 +219,7 @@ public class WebsocketService {
                 msg.setUserId(0);
                 msg.setContent(tips + "群聊成功");
                 msg.setDate(new Date());
+                msg.setType(-1);
                 session.getBasicRemote().sendText(objectMapper.writeValueAsString(msg));
                 System.out.println(roomList);
                 break;
@@ -202,12 +227,14 @@ public class WebsocketService {
                 // 退出群聊
                 Set<Integer> integers = roomList.get(msg.getRoomId());
                 msg.setContent("退出群聊失败");
+                msg.setType(-2);
                 System.out.println(roomList);
                 if (integers != null && !integers.isEmpty())  {
                     // 群存在，则移除元素
                     integers.remove(this.currentUser.getId());
                     roomList.put(msg.getRoomId(),integers);
                     msg.setContent("退出群聊成功");
+                    msg.setType(-1);
                 }
                 msg.setToId(this.currentUser.getId());
                 msg.setUserId(0);
@@ -220,6 +247,7 @@ public class WebsocketService {
                 msg.setUserId(0);
                 msg.setContent("非法操作");
                 msg.setDate(new Date());
+                msg.setType(-2);
                 session.getBasicRemote().sendText(objectMapper.writeValueAsString(msg));
                 break;
         }

@@ -2,6 +2,7 @@ package com.imchat.server.controller;
 
 import cn.hutool.core.convert.ConverterRegistry;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.imchat.server.dto.JoinRoomDTO;
 import com.imchat.server.dto.RoomDTO;
 import com.imchat.server.entity.ChatRoom;
 import com.imchat.server.entity.ChatRoomUser;
@@ -45,13 +46,13 @@ public class RoomController {
      */
     @PostMapping("create")
     @ResponseBody
-    public ResponseVo<String> createRoom(@RequestBody RoomDTO roomDTO) {
+    public ResponseVo<ChatRoom> createRoom(@RequestBody RoomDTO roomDTO) {
 
         ChatRoom chatRoom = new ChatRoom();
 
         chatRoom.setCreateTime(new Date());
         chatRoom.setUserId(((ChatUser)ThreadLocalUtil.get()).getId());
-        chatRoom.setPass("123456");
+        chatRoom.setPass(roomDTO.getPassword());
         chatRoom.setLimitNum(roomDTO.getLimitNum() < 2 ? 2 : roomDTO.getLimitNum());
         chatRoom.setName(roomDTO.getName());
 
@@ -63,17 +64,17 @@ public class RoomController {
         chatRoomUser.setCreateTime(new Date());
         chatRoomUserService.save(chatRoomUser);
 
-        return ResponseVo.success("创建成功");
+        return ResponseVo.success(chatRoom);
     }
 
     /**
      * 退出群聊
-     * @param roomId
      * @return
      */
     @PostMapping("quit")
     @ResponseBody
-    public ResponseVo<String> quitRoom(@RequestParam("room_id") Integer roomId) {
+    public ResponseVo<String> quitRoom(@RequestBody JoinRoomDTO joinRoomDTO) {
+        Integer roomId = joinRoomDTO.getRoomId();
         // 判断是否在这个房间
         LambdaQueryWrapper<ChatRoomUser> lq = new LambdaQueryWrapper<>();
         lq.eq(ChatRoomUser::getRoomId,roomId);
@@ -94,16 +95,27 @@ public class RoomController {
      */
     @PostMapping("join")
     @ResponseBody
-    public ResponseVo<String> joinRoom(@RequestParam("room_id") Integer roomId) {
-
+    public ResponseVo<String> joinRoom(@RequestBody JoinRoomDTO joinRoomDTO) {
+        Integer roomId = joinRoomDTO.getRoomId();
+        String password = joinRoomDTO.getPassword();
         // 判断房间是否存在
         ChatRoom room = chatRoomService.getById(roomId);
         if (null == room) {
             return ResponseVo.error(-1201,"房间不存在");
         }
-
+        if (room.getPass() != null && !room.getPass().equals(password)) {
+            return ResponseVo.error(-1204,"房间密码错误");
+        }
         // 判断是否满了
         LambdaQueryWrapper<ChatRoomUser> lq = new LambdaQueryWrapper<>();
+        // 判断是否已经存在房间里
+        lq.eq(ChatRoomUser::getUserId,((ChatUser) ThreadLocalUtil.get()).getId());
+        lq.eq(ChatRoomUser::getRoomId,roomId);
+        if (chatRoomUserService.count(lq) > 0) {
+            return ResponseVo.error(200,"你已经在这房间里了哦");
+        }
+        // 重置查询条件
+        lq = new LambdaQueryWrapper<>();
         lq.eq(ChatRoomUser::getRoomId,roomId);
         long count = chatRoomUserService.count(lq);
         if (count >= room.getLimitNum()) {
@@ -112,7 +124,7 @@ public class RoomController {
         // 判断是否已经存在房间里
         lq.eq(ChatRoomUser::getUserId,((ChatUser) ThreadLocalUtil.get()).getId());
         if (chatRoomUserService.count(lq) > 0) {
-            return ResponseVo.error(-1203,"你已经在这房间里了哦");
+            return ResponseVo.error(200,"你已经在这房间里了哦");
         }
         // 可以加入
         ChatRoomUser chatRoomUser = new ChatRoomUser();

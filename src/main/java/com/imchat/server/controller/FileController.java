@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * @Description
@@ -29,7 +30,7 @@ public class FileController {
     @PostMapping(value = "/upload/audio", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseBody
     public Map<String,Object> uploadAudio(HttpServletRequest request, @RequestBody MultipartFile audio) throws IOException {
-        String fileName = SecureUtil.md5(audio.getName()); // 保存的文件名
+        String fileName = SecureUtil.md5(UUID.randomUUID().toString()); // 保存的文件名
         String uploadPath = System.getProperty("user.dir") + "/file/upload/"; // 文件保存路径
 
         File file = new File(uploadPath + fileName + ".webm");

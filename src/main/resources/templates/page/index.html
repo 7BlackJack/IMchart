@@ -6,7 +6,7 @@
     <title>IM聊天室</title>
     <!-- Add necessary CDN links for Vue 3 and Element Plus -->
     <!-- Import style -->
-    <link rel="stylesheet" href="/css/index.css" />
+    <link rel="stylesheet" href="/css/index.css"/>
     <!-- Import Vue 3 -->
     <script src="/js/vue.global.js"></script>
     <!-- Import component library -->
@@ -30,6 +30,7 @@
             padding: 20px;
             overflow-y: auto;
         }
+
         .room-list h2 {
             font-size: 1.5rem;
             margin-bottom: 15px;
@@ -153,13 +154,14 @@
             background-color: #3080E8;
         }
 
-        dialog{
+        dialog {
             width: 400px;
             height: 330px;
             border: 1px solid #f0f0f0;
             border-radius: 20px;
         }
-        .content{
+
+        .content {
             width: 100%;
             padding: 20px;
             box-sizing: border-box;
@@ -185,16 +187,22 @@
     </div>
 
     <div class="chat-window">
-        <h2>{{ currentRoomName }}</h2>
+        <h2>{{ currentRoomName }} <el-button v-if="currentRoom != 0 && currentRoomName != '请选择房间'" class="send-button" @click="leaveRoom" style="float:right;background-color: darkred;">退出群聊</el-button></h2>
         <div class="message-container">
-            <div v-for="(message, index) in chatMessages" :key="index" class="message" :class="{ 'my-message': message.userId === currentUserId, 'other-message': message.userId !== currentUserId }">
+            <div v-for="(message, index) in chatMessages" :key="index" class="message"
+                 :class="{ 'my-message': message.userId === currentUserId, 'other-message': message.userId !== currentUserId }">
                 <strong>{{ message.userName }}</strong>
-                <p>{{ message.content }}</p>
+                <div v-if="message.type != 0">
+                    <p v-html="message.content"></p>
+                </div>
+                <div v-else>
+                    <p>{{message.content}}</p>
+                </div>
                 <div class="timestamp">{{ message.createTime }}</div>
             </div>
         </div>
         <div class="input-container" style="margin-left: -20px;">
-            <el-input class="input-box"  :autosize="{ minRows: 1, maxRows: 10 }"
+            <el-input class="input-box" :autosize="{ minRows: 1, maxRows: 10 }"
                       type="textarea" v-model="newMessage" placeholder="请输入你的消息内容"></el-input>
             <el-button class="send-button" @click="sendMessage">发送</el-button>
             <el-button class="send-button" @click="startRecording">开始录音</el-button>
@@ -247,85 +255,125 @@
     </dialog>
 </div>
 </div>
-<audio></audio>
 <script>
-    const { ref } = Vue;
-    const { ElMessage } = ElementPlus;
+    const getFormattedDate = () => {
+        // 创建一个Date对象
+        const date = new Date();
+        // 获取年份
+        const year = date.getFullYear();
+        // 获取月份（返回值为0-11，需要加1）
+        const month = date.getMonth() + 1;
+        // 获取日期
+        const day = date.getDate();
+        // 获取小时
+        const hour = date.getHours();
+        // 获取分钟
+        const minute = date.getMinutes();
+        // 获取秒数
+        const second = date.getSeconds();
+        // 格式化日期
+        const formattedDate = year + '-' + addZero(month) + '-' + addZero(day) + ' ' + addZero(hour) + ':' + addZero(minute) + ':' + addZero(second);
+
+        // 补零函数，用于将个位数的时间补零（例如：1 -> 01）
+        function addZero(num) {
+            return num < 10 ? '0' + num : num;
+        }
+        return formattedDate;
+    }
+
+</script>
+<script>
+    const {ref} = Vue;
+    const {ElMessage} = ElementPlus;
+    let socket = null;
+    let t;
+    const token = `[[${token}]]`;
+    let dialog;
     const app = Vue.createApp({
         data() {
             return {
-                roomObj:{
+                myRoomList:[[${my_room_list}]],
+                roomObj: {
                     name: "",
                     pass: "",
                     limitNum: 2,
                 },
-                roomList: [
-                ],
+                roomList: [],
                 currentRoom: 0,
                 currentRoomName: '请选择房间',
                 currentUserId: [[${user_id}]],
                 currentUser: '[[${user}]]',
                 chatMessages: [
-                    { user: 'User1', content: 'Hello!', timestamp: '10:00 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    { user: 'CurrentUser', content: 'Hi there!', timestamp: '10:05 AM' },
-                    // Add more messages as needed
                 ],
                 newMessage: '',
-                isPopupVisible:false,
-                mediaRecorder:null,
+                isPopupVisible: false,
+                mediaRecorder: null,
                 recordedChunks: [],
             };
         },
         methods: {
             selectRoom(roomId) {
+                // 弹窗
+                console.log("加入群聊弹窗");
+                this.roomObj.name = this.roomList.find(room => room.id === roomId).name;
                 this.currentRoom = roomId;
-                this.currentRoomName = this.roomList.find(room => room.id === roomId).name;
-
-                // 获取聊天记录
-                this.getMessageList();
-            },
-            sendMessage() {
-                if (this.newMessage.trim() !== '') {
-                    this.chatMessages.push({
-                        user: 'CurrentUser',
-                        content: this.newMessage,
-                        timestamp: new Date().toLocaleTimeString(),
-                    });
-                    this.newMessage = '';
+                if (this.myRoomList.find(room => room === this.currentRoom)) {
+                    this.initRoom();
+                    return;
                 }
+                dialog = document.getElementById("join-dialog");
+                dialog.showModal();
+
+                // this.currentRoom = roomId;
+                // this.currentRoomName = this.roomList.find(room => room.id === roomId).name;
+                //
+                // // 获取聊天记录
+                // this.getMessageList();
             },
-            createRoom(){
-                console.log("弹窗")
-                const dialog = document.getElementById("create-dialog");
+            createRoom() {
+                dialog = document.getElementById("create-dialog");
                 dialog.showModal();
             },
             closePopup() {
-                const dialog = document.getElementById("create-dialog");
                 dialog.close();
             },
+            // 退出登录
             logout() {
-
+                console.log("退出登录");
+                document.cookie = "login_token=''; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                window.location.href = "/login";
             },
             submitForm() {
-                // Implement your form submission logic here
-                console.log('Form submitted!');
-                this.closePopup(); // Close the popup after form submission if needed
+                // 创建房间
+                console.log("创建房间");
+                axios({
+                    method: 'post',
+                    url: `/room/create`,
+                    data: {
+                        name: this.roomObj.name,
+                        password: this.roomObj.pass,
+                        limitNum: this.roomObj.limitNum,
+                    },
+                }).then(res => {
+                    if (res.data.code == 200) {
+                        ElMessage({
+                            message: '创建房间成功',
+                            type: 'success',
+                        })
+                        this.myRoomList.push(res.data.data.id);
+                        dialog.close();
+                        // 刷新房间列表
+                        this.refreshRoomList();
+                    } else {
+                        ElMessage({
+                            message: '创建房间失败:' + res.data.message,
+                            type: 'error',
+                        })
+                        dialog.close();
+                    }
+                });
             },
+            // 刷新房间列表
             refreshRoomList() {
                 // 开始请求
                 axios({
@@ -346,6 +394,7 @@
                     }
                 });
             },
+            // 获取消息记录
             getMessageList() {
                 // 开始请求
                 axios({
@@ -366,51 +415,76 @@
                     }
                 });
             },
-            // 录音
+            // 开始录音
             startRecording() {
                 let _this = this;
-                navigator.mediaDevices.getUserMedia({ audio: true })
-                    .then(function(stream) {
+                navigator.mediaDevices.getUserMedia({audio: true})
+                    .then(function (stream) {
                         _this.mediaRecorder = new MediaRecorder(stream);
                         _this.mediaRecorder.start();
 
-                        _this.mediaRecorder.addEventListener('dataavailable', function(e) {
+                        _this.mediaRecorder.addEventListener('dataavailable', function (e) {
                             _this.recordedChunks.push(e.data);
                         });
                     })
-                    .catch(function(err) {
+                    .catch(function (err) {
                         console.log('无法访问麦克风:', err);
                     });
             },
+            // 停止录音 并自动上传和播放
             stopRecording() {
                 let _this = this;
                 _this.mediaRecorder.stop();
 
-                _this.mediaRecorder.addEventListener('stop', function() {
-                    const audioBlob = new Blob(_this.recordedChunks, { type: 'audio/webm' });
+                _this.mediaRecorder.addEventListener('stop', function () {
+                    const audioBlob = new Blob(_this.recordedChunks, {type: 'audio/webm'});
                     const audioUrl = URL.createObjectURL(audioBlob);
 
                     const uploadForm = new FormData();
                     console.log(audioUrl)
-                    uploadForm.append('audio', audioBlob, 'recorded_audio.webm');
+                    uploadForm.append('audio', audioBlob, Math.random() + '.webm');
 
                     axios({
                         method: 'post',
                         url: `/upload/audio`,
                         data: uploadForm,
                         headers: {
-                            "Content-Type" : "multipart/form-data",
+                            "Content-Type": "multipart/form-data",
                         }
                     }).then(res => {
                         if (res.data.code == 200) {
                             ElMessage({
                                 message: '音频上传成功',
                                 type: 'success',
-                            })
+                            });
+                            // 发送
+                            let message = {
+                                roomId: _this.currentRoom,
+                                userId: _this.currentUserId,
+                                content: `[语音消息]<button onClick="toggleAudio('${res.data.data.file}')">播放</button>
+<audio src="${res.data.data.url}" id="audio-${res.data.data.file}"></audio>`,
+                                type: 2,
+                                action: 0,
+                                date: getFormattedDate(),
+                            };
+
+                            // 发送消息
+                            socket.send(JSON.stringify(message));
+
+                            _this.chatMessages.push({
+                                roomId: message.roomId,
+                                userId: message.userId,
+                                toId: message.toId,
+                                type: message.type,
+                                userName: this.currentUser, //用户名
+                                content: message.content,
+                                createTime: message.date,
+                            });
+                            // 自动播放
                             setTimeout(() => {
                                 const audio = new Audio(res.data.data.url);
                                 audio.play();
-                            },3000);
+                            }, 3000);
                         } else {
                             ElMessage({
                                 message: '音频上传失败:' + res,
@@ -421,16 +495,213 @@
                 });
 
             },
+            // 进入房间
+            joinRoom() {
+                // 发起请求
+                axios({
+                    method: 'post',
+                    url: `/room/join`,
+                    data: {
+                        roomId: this.currentRoom,
+                        password: this.roomObj.pass,
+                    },
+                }).then(res => {
+                    if (res.data.code == 200) {
+                        ElMessage({
+                            message: '进入房间成功',
+                            type: 'success',
+                        })
+                        dialog.close();
+                        this.myRoomList.push(this.currentRoom);
+                        this.initRoom();
+                    } else {
+                        ElMessage({
+                            message: '进入房间失败:' + res.data.message,
+                            type: 'error',
+                        })
+                    }
+                });
+            },
+            initRoom() {
+                let msg = {
+                    roomId: this.currentRoom,
+                    userId: this.currentUserId,
+                    date: getFormattedDate(),
+                    action: 1, // 1进入群聊 2 退出群聊
+                };
+                // 发送消息
+                socket.send(JSON.stringify(msg));
+                this.currentRoomName = this.roomList.find(room => room.id === this.currentRoom).name;
+                // 获取聊天记录
+                this.getMessageList();
+            },
+            // 初始化websocket连接
+            initWebsocket() {
+                // 创建WebSocket对象
+                socket = new WebSocket("ws://localhost:9089/im/" + token);
+
+                // 连接成功时触发
+                socket.onopen = () => {
+                    ElMessage({
+                        message: '通信服务器初始化成功 ',
+                        type: 'success',
+                    });
+                    console.log("WebSocket连接成功");
+                    // 开启心跳
+                    this.hearting();
+                }
+
+                // 连接异常时触发
+                socket.onerror = () => {
+                    ElMessage({
+                        message: '通信服务器异常，断开连接',
+                        type: 'error',
+                    })
+                }
+
+                // 接收到消息时触发
+                socket.onmessage = (e) => {
+                    let message = JSON.parse(e.data);
+                    // 处理接收到的消息
+                    console.log("接收到消息：", message);
+
+                    if (message.type == -1) {
+                        // 成功提示
+                        return;
+                    } else if (message.type == -2) {
+                        // 失败提示
+                        ElMessage({
+                            message: '操作失败：' + message.content,
+                            type: 'error',
+                        })
+                        return;
+                    }
+
+                    // 处理接收到的消息
+
+                    // 语音消息转换
+
+                    // 图片消息转换
+
+
+                    // 把消息追加到消息列表
+                    this.chatMessages.push({
+                        roomId: message.roomId,
+                        userid: message.userId,
+                        toId: message.toId,
+                        type: message.type,
+                        userName: message.userName,
+                        content: message.content,
+                        createTime: message.date,
+                    });
+                }
+
+                // 连接关闭时触发
+                socket.onclose = (e) =>  {
+                    ElMessage({
+                        message: '与通信服务器断开连接',
+                        type: 'error',
+                    })
+                    // 关闭心跳
+                    clearInterval(t);
+                };
+            },
+            sendMessage() {
+                if (this.newMessage.trim() === '') {
+                    ElMessage({
+                        message: '消息不能为空',
+                        type: 'error',
+                    })
+                    return;
+                }
+
+                let message = {
+                    content: this.newMessage,
+                    roomId: this.currentRoom,
+                    userId: this.currentUserId,
+                    type: 0,
+                    action: 0,
+                    date: getFormattedDate(),
+                };
+
+                // 发送消息
+                socket.send(JSON.stringify(message));
+
+                this.chatMessages.push({
+                    roomId: message.roomId,
+                    userId: message.userId,
+                    toId: message.toId,
+                    type: message.type,
+                    userName: this.currentUser, //用户名
+                    content: message.content,
+                    createTime: message.date,
+                });
+
+                this.newMessage = '';
+            },
+            hearting() {
+                // 10秒发送一次心跳
+                t = setInterval(() => {
+                    socket.send("hearting")
+                },10000);
+            },
+            // 退群
+            leaveRoom() {
+                // 发起请求
+                axios({
+                    method: 'post',
+                    url: `/room/quit`,
+                    data: {
+                        roomId: this.currentRoom,
+                    },
+                }).then(res => {
+                    if (res.data.code == 200) {
+                        ElMessage({
+                            message: '退出房间成功',
+                            type: 'success',
+                        })
+                        this.myRoomList = this.myRoomList.filter(id => id !== this.currentRoom);
+                        let msg = {
+                            roomId: this.currentRoom,
+                            userId: this.currentUserId,
+                            date: getFormattedDate(),
+                            action: 2, // 1进入群聊 2 退出群聊
+                        };
+                        // 发送消息
+                        socket.send(JSON.stringify(msg));
+                        this.chatMessages = [];
+                        this.currentRoomName = '请选择房间';
+                    } else {
+                        ElMessage({
+                            message: '退出房间失败:' + res.data.message,
+                            type: 'error',
+                        })
+                    }
+                });
+            },
         },
         mounted() {
             // 获取房间
             this.refreshRoomList();
+            this.initWebsocket();
+
+            console.log(this.myRoomList);
         },
     });
 
     // 注册 Element Plus 组件
     app.use(ElementPlus);
     app.mount('#app');
+
+    // 播放事件
+    const toggleAudio = (ref) => {
+        const audioElement = document.getElementById('audio-' + ref);
+        if (audioElement.paused) {
+            audioElement.play();
+        } else {
+            audioElement.pause();
+        }
+    }
 </script>
 </body>
 </html>

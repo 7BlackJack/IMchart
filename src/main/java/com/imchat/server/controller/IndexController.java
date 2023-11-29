@@ -3,22 +3,22 @@ package com.imchat.server.controller;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.imchat.server.dto.RegisterDTO;
+import com.imchat.server.entity.ChatRoomUser;
 import com.imchat.server.entity.ChatUser;
+import com.imchat.server.service.ChatRoomUserService;
 import com.imchat.server.service.ChatUserService;
 import com.imchat.server.util.ThreadLocalUtil;
-import com.imchat.server.util.WebUtil;
 import com.imchat.server.vo.ResponseVo;
 import com.imchat.server.websocket.WebsocketService;
 import com.wf.captcha.GifCaptcha;
 import com.wf.captcha.base.Captcha;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.sqlite.util.StringUtils;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -26,6 +26,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @Description
@@ -40,17 +42,26 @@ import java.util.Map;
 public class IndexController {
 
     private final ChatUserService userService;
+    private final ChatRoomUserService chatRoomUserService;
 
     @RequestMapping("test")
     public String test() {
         return "test";
     }
 
+
     @GetMapping({"/","/index"})
     public String index(Model model) {
         ChatUser user = (ChatUser) ThreadLocalUtil.get();
         model.addAttribute("user",user.getUsername());
         model.addAttribute("user_id",user.getId());
+        model.addAttribute("token",user.getLoginSign());
+
+        // 获取已经加入群的群聊ID
+        Set<Integer> roomIdList = chatRoomUserService.list(Wrappers.<ChatRoomUser>lambdaQuery().eq(ChatRoomUser::getUserId, user.getId()))
+                .stream().map(ChatRoomUser::getRoomId).collect(Collectors.toSet());
+
+        model.addAttribute("my_room_list", roomIdList);
         return "page/index";
     }
 
@@ -102,7 +113,7 @@ public class IndexController {
         Map<String, String> map = new HashMap<>(1);
         map.put("token",token);
         Cookie cookie = new Cookie("login_token", token);
-        cookie.setMaxAge(3600); // 设置 cookie 的过期时间，单位为秒
+        cookie.setMaxAge(86400); // 设置 cookie 的过期时间，单位为秒
         cookie.setPath("/"); // 设置 cookie 的作用路径，这里设置为根路径，表示在整个网站内有效
         response.addCookie(cookie); // 添加cookie到当前响应头
         return ResponseVo.success("登录成功",map);
