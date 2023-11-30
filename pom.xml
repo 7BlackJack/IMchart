@@ -94,7 +94,8 @@
                 <version>${spring-boot.version}</version>
                 <configuration>
                     <mainClass>com.imchat.server.ImChatHomeworkApplication</mainClass>
-                    <skip>true</skip>
+                    <!-- 必须注释这个，不然package打包的时候不会把依赖一起打包 -->
+<!--                    <skip>true</skip>-->
                 </configuration>
                 <executions>
                     <execution>
