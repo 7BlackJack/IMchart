@@ -68,6 +68,14 @@ public class ChatUser implements Serializable {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
 
+    /**
+     * 上次成功连接Websocket的时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Date lastWebsocketTime;
+
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
 }

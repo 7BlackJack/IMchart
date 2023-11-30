@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IM聊天室-私聊版</title>
+    <!-- Add necessary CDN links for Vue 3 and Element Plus -->
+    <!-- Import style -->
+    <link rel="stylesheet" href="/css/index.css"/>
+    <!-- Import Vue 3 -->
+    <script src="/js/vue.global.js"></script>
+    <!-- Import component library -->
+    <script src="/js/index.full.js"></script>
+    <script src="/js/axios.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+        }
+
+        #app {
+            display: flex;
+            height: 100vh;
+        }
+
+        .room-list {
+            width: 25%;
+            min-width: 200px;
+            background-color: #f0f0f0;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .room-list h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .room-list ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .room-list li {
+            cursor: pointer;
+            padding: 10px;
+            margin-bottom: 5px;
+            background-color: #fff;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .room-list li:hover {
+            background-color: #e0e0e0;
+        }
+
+        .chat-window {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .message-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            max-height: 85%;
+            overflow-y: auto; /* Add this line to enable vertical scrollbar */
+        }
+
+        .message {
+            max-width: 70%;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .my-message {
+            align-self: flex-end;
+            background-color: #95d475;
+            color: #fff;
+        }
+
+        .other-message {
+            align-self: flex-start;
+            background-color: #fff;
+            border: 1px solid #ccc;
+        }
+
+        .message strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .timestamp {
+            font-size: 0.8rem;
+            color: #777;
+        }
+
+        .message strong {
+            color: #333;
+        }
+
+        .input-container {
+            width: 100%;
+            display: flex;
+            padding: 10px;
+            box-sizing: border-box; /* Added box-sizing */
+            background-color: #fff;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+            position: absolute;
+            bottom: 0;
+        }
+
+        .input-box {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .send-button {
+            background-color: #409EFF;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .send-button:hover {
+            background-color: #3080E8;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .sidebar-footer a {
+            margin-top: 10px;
+            padding: 5px 10px;
+            background-color: #409EFF;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .sidebar-footer a:hover {
+            background-color: #3080E8;
+        }
+
+        dialog {
+            width: 400px;
+            height: 330px;
+            border: 1px solid #f0f0f0;
+            border-radius: 20px;
+        }
+
+        .content {
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="room-list">
+        <h2>当前用户列表</h2>
+        <ul>
+            <li v-for="(user, index) in userList" :key="index" @click="selectUser(user.id)">
+                {{ user.username }}
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <a href="#" @click="refreshUserList">刷新用户列表</a>
+            <a th:href="@{/}">群聊天</a>
+            <a href="#" @click="logout">退出登录</a>
+        </div>
+    </div>
+
+    <div class="chat-window">
+        <h2>{{ currentFriendName }}</h2>
+        <div class="message-container">
+            <div v-for="(message, index) in chatMessages" :key="index" class="message"
+                 :class="{ 'my-message': message.userId === currentUserId, 'other-message': message.userId !== currentUserId }">
+                <strong>{{ message.userName }}</strong>
+                <div v-if="message.type != 0">
+                    <p v-html="message.content"></p>
+                </div>
+                <div v-else>
+                    <p>{{message.content}}</p>
+                </div>
+                <div class="timestamp">{{ message.createTime }}</div>
+            </div>
+        </div>
+        <div class="input-container" style="margin-left: -20px;">
+            <el-input class="input-box" :autosize="{ minRows: 1, maxRows: 10 }"
+                      type="textarea" v-model="newMessage" placeholder="请输入你的消息内容"></el-input>
+            <el-button class="send-button" @click="sendMessage">发送</el-button>
+            <el-button class="send-button" @click="startRecording">开始录音</el-button>
+            <el-button class="send-button" @click="stopRecording">停止录音</el-button>
+        </div>
+    </div>
+</div>
+</div>
+<script>
+    const getFormattedDate = () => {
+        // 创建一个Date对象
+        const date = new Date();
+        // 获取年份
+        const year = date.getFullYear();
+        // 获取月份（返回值为0-11，需要加1）
+        const month = date.getMonth() + 1;
+        // 获取日期
+        const day = date.getDate();
+        // 获取小时
+        const hour = date.getHours();
+        // 获取分钟
+        const minute = date.getMinutes();
+        // 获取秒数
+        const second = date.getSeconds();
+        // 格式化日期
+        const formattedDate = year + '-' + addZero(month) + '-' + addZero(day) + ' ' + addZero(hour) + ':' + addZero(minute) + ':' + addZero(second);
+
+        // 补零函数，用于将个位数的时间补零（例如：1 -> 01）
+        function addZero(num) {
+            return num < 10 ? '0' + num : num;
+        }
+        return formattedDate;
+    }
+
+</script>
+<script>
+    const {ref} = Vue;
+    const {ElMessage} = ElementPlus;
+    let socket = null;
+    let t;
+    const token = `[[${token}]]`;
+    let dialog;
+    const app = Vue.createApp({
+        data() {
+            return {
+                userList: [],
+                currentFriendId: 0,
+                currentFriendName: '请选择用户',
+                currentUserId: [[${user_id}]],
+                currentUser: '[[${user}]]',
+                chatMessages: [
+                ],
+                newMessage: '',
+                isPopupVisible: false,
+                mediaRecorder: null,
+                recordedChunks: [],
+            };
+        },
+        methods: {
+
+            // 退出登录
+            logout() {
+                console.log("退出登录");
+                document.cookie = "login_token=''; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                window.location.href = "/login";
+            },
+
+            // 刷新好友列表
+            refreshUserList() {
+                // 开始请求
+                axios({
+                    method: 'get',
+                    url: `/friend/list`,
+                }).then(res => {
+                    if (res.data.code == 200) {
+                        ElMessage({
+                            message: '获取用户列表成功',
+                            type: 'success',
+                        })
+                        this.userList = res.data.data;
+                    } else {
+                        ElMessage({
+                            message: '获取用户列表失败:' + res.data.message,
+                            type: 'error',
+                        })
+                    }
+                });
+            },
+            // 获取消息记录
+            getMessageList() {
+                // 开始请求
+                axios({
+                    method: 'get',
+                    url: `/message/${this.currentFriendId}`,
+                }).then(res => {
+                    if (res.data.code == 200) {
+                        ElMessage({
+                            message: '获取聊天记录成功',
+                            type: 'success',
+                        })
+                        this.chatMessages = res.data.data;
+                    } else {
+                        ElMessage({
+                            message: '获取聊天记录失败:' + res.data.message,
+                            type: 'error',
+                        })
+                    }
+                });
+            },
+            // 开始录音
+            startRecording() {
+                let _this = this;
+                navigator.mediaDevices.getUserMedia({audio: true})
+                    .then(function (stream) {
+                        _this.mediaRecorder = new MediaRecorder(stream);
+                        _this.mediaRecorder.start();
+
+                        _this.mediaRecorder.addEventListener('dataavailable', function (e) {
+                            _this.recordedChunks.push(e.data);
+                        });
+                    })
+                    .catch(function (err) {
+                        ElMessage({
+                            message: '无法访问麦克风',
+                            type: 'danger',
+                        });
+                        console.log('无法访问麦克风:', err);
+                    });
+            },
+            // 停止录音 并自动上传和播放
+            stopRecording() {
+                let _this = this;
+                _this.mediaRecorder.stop();
+
+                _this.mediaRecorder.addEventListener('stop', function () {
+                    const audioBlob = new Blob(_this.recordedChunks, {type: 'audio/webm'});
+                    const audioUrl = URL.createObjectURL(audioBlob);
+
+                    const uploadForm = new FormData();
+                    console.log(audioUrl)
+                    uploadForm.append('audio', audioBlob, Math.random() + '.webm');
+
+                    axios({
+                        method: 'post',
+                        url: `/upload/audio`,
+                        data: uploadForm,
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                        }
+                    }).then(res => {
+                        if (res.data.code == 200) {
+                            ElMessage({
+                                message: '音频上传成功',
+                                type: 'success',
+                            });
+                            // 发送
+                            let message = {
+                                toId: _this.currentFriendId,
+                                userId: _this.currentUserId,
+                                content: `[语音消息]<button onClick="toggleAudio('${res.data.data.file}')">播放</button>
+<audio src="${res.data.data.url}" id="audio-${res.data.data.file}"></audio>`,
+                                type: 2,
+                                action: 0,
+                                date: getFormattedDate(),
+                            };
+
+                            // 发送消息
+                            socket.send(JSON.stringify(message));
+
+                            _this.chatMessages.push({
+                                userId: message.userId,
+                                toId: message.toId,
+                                type: message.type,
+                                userName: this.currentUser, //用户名
+                                content: message.content,
+                                createTime: message.date,
+                            });
+                            // 自动播放
+                            setTimeout(() => {
+                                const audio = new Audio(res.data.data.url);
+                                audio.play();
+                            }, 3000);
+                        } else {
+                            ElMessage({
+                                message: '音频上传失败:' + res,
+                                type: 'error',
+                            })
+                        }
+                    });
+                });
+
+            },
+            // 初始化websocket连接
+            initWebsocket() {
+                // 创建WebSocket对象
+                socket = new WebSocket("ws://localhost:9089/im/" + token);
+
+                // 连接成功时触发
+                socket.onopen = () => {
+                    ElMessage({
+                        message: '通信服务器初始化成功 ',
+                        type: 'success',
+                    });
+                    console.log("WebSocket连接成功");
+                    // 开启心跳
+                    this.hearting();
+                }
+
+                // 连接异常时触发
+                socket.onerror = () => {
+                    ElMessage({
+                        message: '通信服务器异常，断开连接',
+                        type: 'error',
+                    })
+                }
+
+                // 接收到消息时触发
+                socket.onmessage = (e) => {
+                    let message = JSON.parse(e.data);
+                    // 处理接收到的消息
+                    console.log("接收到消息：", message);
+
+                    if (message.type == -1) {
+                        // 成功提示
+                        return;
+                    } else if (message.type == -2) {
+                        // 失败提示
+                        ElMessage({
+                            message: '操作失败：' + message.content,
+                            type: 'error',
+                        })
+                        return;
+                    }
+
+                    // 处理接收到的消息
+
+                    // 语音消息转换
+
+                    // 图片消息转换
+
+
+                    // 把消息追加到消息列表
+                    this.chatMessages.push({
+                        roomId: message.roomId,
+                        userid: message.userId,
+                        toId: message.toId,
+                        type: message.type,
+                        userName: message.userName,
+                        content: message.content,
+                        createTime: message.date,
+                    });
+                }
+
+                // 连接关闭时触发
+                socket.onclose = (e) =>  {
+                    ElMessage({
+                        message: '与通信服务器断开连接',
+                        type: 'error',
+                    })
+                    // 关闭心跳
+                    clearInterval(t);
+                };
+            },
+            sendMessage() {
+                if (this.newMessage.trim() === '') {
+                    ElMessage({
+                        message: '消息不能为空',
+                        type: 'error',
+                    })
+                    return;
+                }
+
+                let message = {
+                    content: this.newMessage,
+                    toId: this.currentFriendId,
+                    userId: this.currentUserId,
+                    type: 0,
+                    action: 0,
+                    date: getFormattedDate(),
+                };
+
+                // 发送消息
+                socket.send(JSON.stringify(message));
+
+                this.chatMessages.push({
+                    roomId: message.roomId,
+                    userId: message.userId,
+                    toId: message.toId,
+                    type: message.type,
+                    userName: this.currentUser, //用户名
+                    content: message.content,
+                    createTime: message.date,
+                });
+
+                this.newMessage = '';
+            },
+            hearting() {
+                // 10秒发送一次心跳
+                t = setInterval(() => {
+                    socket.send("hearting")
+                },10000);
+            },
+            // 选择好友
+            selectUser(userId) {
+                console.log("选择好友成功");
+                this.currentFriendId = userId;
+                this.currentFriendName = '正在与[' + this.userList.find(user => user.id === this.currentFriendId).username + ']聊天';
+
+                // 获取聊天记录
+                this.getMessageList();
+            },
+        },
+        mounted() {
+            // 获取用户列表
+            this.refreshUserList();
+            this.initWebsocket();
+        },
+    });
+
+    // 注册 Element Plus 组件
+    app.use(ElementPlus);
+    app.mount('#app');
+
+    // 播放事件
+    const toggleAudio = (ref) => {
+        const audioElement = document.getElementById('audio-' + ref);
+        if (audioElement.paused) {
+            audioElement.play();
+        } else {
+            audioElement.pause();
+        }
+    }
+</script>
+</body>
+</html>

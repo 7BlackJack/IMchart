@@ -62,8 +62,10 @@ public class MessageController {
         lq.or(q -> q.eq(ChatMessage::getToId, userId).eq(ChatMessage::getUserId, ((ChatUser)ThreadLocalUtil.get()).getId()))
                         .or(q -> q.eq(ChatMessage::getUserId, userId).eq(ChatMessage::getToId, ((ChatUser)ThreadLocalUtil.get()).getId()))
                 .eq(ChatMessage::getRoomId,0);
-//        lq.eq(ChatMessage::getToId, userId);
-//        lq.eq(ChatMessage::getUserId, ((ChatUser)ThreadLocalUtil.get()).getId());
+        // 判断会员逻辑，非会员只能获取连接websocket后的聊天记录
+        if (((ChatUser)ThreadLocalUtil.get()).getVip() == 0) {
+            lq.gt(ChatMessage::getCreateTime,((ChatUser)ThreadLocalUtil.get()).getLastWebsocketTime());
+        }
         List<ChatMessage> list = chatMessageService.list(lq);
         List<MessageVo> target = new ArrayList<>();
         ConverterRegistry converterRegistry = ConverterRegistry.getInstance();
@@ -89,13 +91,11 @@ public class MessageController {
      */
     @GetMapping("/room/{roomId}")
     public ResponseVo<List<MessageVo>> getRoomMessage(@PathVariable String roomId) {
-
-        // 判断会员逻辑，这里直接禁止非会员访问
-        if (((ChatUser)ThreadLocalUtil.get()).getVip() == 0) {
-            return ResponseVo.error(-1303,"无权限哦");
-        }
-
         LambdaQueryWrapper<ChatMessage> lq = new LambdaQueryWrapper<>();
+        // 判断会员逻辑，非会员只能获取连接websocket后的聊天记录
+        if (((ChatUser)ThreadLocalUtil.get()).getVip() == 0) {
+            lq.gt(ChatMessage::getCreateTime,((ChatUser)ThreadLocalUtil.get()).getLastWebsocketTime());
+        }
         lq.eq(ChatMessage::getRoomId, roomId);
         List<ChatMessage> list = chatMessageService.list(lq);
         List<MessageVo> target = new ArrayList<>();
