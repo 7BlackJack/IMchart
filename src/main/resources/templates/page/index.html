@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -182,6 +182,7 @@
         <div class="sidebar-footer">
             <a href="#" @click="createRoom">创建房间</a>
             <a href="#" @click="refreshRoomList">刷新房间列表</a>
+            <a th:href="@{/friend}">好友聊天</a>
             <a href="#" @click="logout">退出登录</a>
         </div>
     </div>
@@ -294,6 +295,7 @@
             return {
                 myRoomList:[[${my_room_list}]],
                 roomObj: {
+                    id: 0,
                     name: "",
                     pass: "",
                     limitNum: 2,
@@ -316,9 +318,10 @@
                 // 弹窗
                 console.log("加入群聊弹窗");
                 this.roomObj.name = this.roomList.find(room => room.id === roomId).name;
-                this.currentRoom = roomId;
-                if (this.myRoomList.find(room => room === this.currentRoom)) {
-                    this.initRoom();
+                this.roomObj.id = roomId;
+                //this.currentRoom = roomId;
+                if (this.myRoomList.find(room => room === roomId)) {
+                    this.initRoom(roomId);
                     return;
                 }
                 dialog = document.getElementById("join-dialog");
@@ -428,6 +431,10 @@
                         });
                     })
                     .catch(function (err) {
+                        ElMessage({
+                            message: '无法访问麦克风',
+                            type: 'danger',
+                        });
                         console.log('无法访问麦克风:', err);
                     });
             },
@@ -502,7 +509,7 @@
                     method: 'post',
                     url: `/room/join`,
                     data: {
-                        roomId: this.currentRoom,
+                        roomId: this.roomObj.id,
                         password: this.roomObj.pass,
                     },
                 }).then(res => {
@@ -513,25 +520,32 @@
                         })
                         dialog.close();
                         this.myRoomList.push(this.currentRoom);
-                        this.initRoom();
+                        this.initRoom(this.roomObj.id);
                     } else {
                         ElMessage({
                             message: '进入房间失败:' + res.data.message,
                             type: 'error',
                         })
                     }
+                    this.roomObj = {
+                        id: 0,
+                        name: "",
+                        pass: "",
+                        limitNum: 2,
+                    };
                 });
             },
-            initRoom() {
+            initRoom(roomId) {
                 let msg = {
-                    roomId: this.currentRoom,
+                    roomId: roomId,
                     userId: this.currentUserId,
                     date: getFormattedDate(),
                     action: 1, // 1进入群聊 2 退出群聊
                 };
                 // 发送消息
                 socket.send(JSON.stringify(msg));
-                this.currentRoomName = this.roomList.find(room => room.id === this.currentRoom).name;
+                this.currentRoom = roomId;
+                this.currentRoomName = this.roomList.find(room => room.id === roomId).name;
                 // 获取聊天记录
                 this.getMessageList();
             },

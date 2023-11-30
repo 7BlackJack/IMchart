@@ -49,6 +49,16 @@ public class IndexController {
         return "test";
     }
 
+    @GetMapping("/friend")
+    public String friend(Model model) {
+
+        ChatUser user = (ChatUser) ThreadLocalUtil.get();
+        model.addAttribute("user",user.getUsername());
+        model.addAttribute("user_id",user.getId());
+        model.addAttribute("token",user.getLoginSign());
+        return "page/friend";
+    }
+
 
     @GetMapping({"/","/index"})
     public String index(Model model) {

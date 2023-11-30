@@ -24,7 +24,7 @@ public class WebsocketMessageVo {
     /**
      * 群聊ID 可空
      */
-    private Integer roomId;
+    private Integer roomId = 0;
 
     /**
      * 发送者ID
@@ -39,7 +39,7 @@ public class WebsocketMessageVo {
     /**
      * 接收者ID
      */
-    private Integer toId;
+    private Integer toId = 0;
 
     /**
      * 操作

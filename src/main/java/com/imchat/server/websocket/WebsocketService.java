@@ -6,6 +6,7 @@ import com.imchat.server.entity.ChatMessage;
 import com.imchat.server.entity.ChatUser;
 import com.imchat.server.service.ChatMessageService;
 import com.imchat.server.service.ChatUserService;
+import com.imchat.server.vo.MessageVo;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,18 @@ public class WebsocketService {
      * 房号 用户角色ID（不能重复）
      */
     private static ConcurrentHashMap<Integer, Set<Integer>> roomList = new ConcurrentHashMap<>();
+
+    /**
+     * 用来存储用户的群聊天记录
+     * 用户ID 房间号
+     */
+    private static ConcurrentHashMap<Integer, ConcurrentHashMap<Integer,List<ChatMessage>>> roomMessageList = new ConcurrentHashMap<>();
+
+    /**
+     * 用来存储用户的用户聊天记录
+     * 用户ID 对方ID
+     */
+    private static ConcurrentHashMap<Integer, ConcurrentHashMap<Integer,List<ChatMessage>>> friendMessageList = new ConcurrentHashMap<>();
 
     /** 与某个客户端的连接会话，需要通过它来给客户端发送数据 **/
     private Session session;
@@ -186,8 +199,10 @@ public class WebsocketService {
                 messageService.save(chatMessage);
                 if (msg.getRoomId() > 0) {
                     // 群发
+                    // 保存到本地聊天记录中
                     broadcast(msg.getRoomId(), objectMapper.writeValueAsString(msg));
                 } else {
+                    // 保存到本地聊天记录中
                     sendInfo(msg.getToId(), objectMapper.writeValueAsString(msg));
                 }
                 break;
@@ -310,5 +325,38 @@ public class WebsocketService {
      */
     public static int getOnlineNum() {
         return onlineNum.get();
+    }
+
+    /**
+     * 保存群聊记录
+     * @param roomId
+     * @param message
+     */
+    public void saveRoomMessage(Integer roomId, WebsocketMessageVo message) {
+        // 获取当前用户的群聊消息列表
+        ConcurrentHashMap<Integer, List<ChatMessage>> myRoomMessageList = roomMessageList.get(this.currentUser.getId());
+        // 判断这个群聊的记录是否已建立
+        if (myRoomMessageList.containsKey(roomId)) {
+            // 建立了，追加
+
+        } else {
+            // 没建立
+        }
+    }
+
+    /**
+     * 保存私聊记录
+     * @param userId
+     * @param message
+     */
+    public void saveFriendMessage(Integer userId, WebsocketMessageVo message) {
+        // 获取当前用户的私聊消息列表
+        ConcurrentHashMap<Integer, List<ChatMessage>> myFriendMessageList = friendMessageList.get(this.currentUser.getId());
+        // 判断这个私聊的记录是否已建立
+        if (myFriendMessageList.containsKey(userId)) {
+            // 建立了，追加
+        } else {
+            // 没建立
+        }
     }
 }

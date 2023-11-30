@@ -59,8 +59,11 @@ public class MessageController {
     @GetMapping("/{userId}")
     public ResponseVo<List<MessageVo>> getUserMessage(@PathVariable String userId) {
         LambdaQueryWrapper<ChatMessage> lq = new LambdaQueryWrapper<>();
-        lq.eq(ChatMessage::getToId, userId);
-        lq.eq(ChatMessage::getUserId, ((ChatUser)ThreadLocalUtil.get()).getId());
+        lq.or(q -> q.eq(ChatMessage::getToId, userId).eq(ChatMessage::getUserId, ((ChatUser)ThreadLocalUtil.get()).getId()))
+                        .or(q -> q.eq(ChatMessage::getUserId, userId).eq(ChatMessage::getToId, ((ChatUser)ThreadLocalUtil.get()).getId()))
+                .eq(ChatMessage::getRoomId,0);
+//        lq.eq(ChatMessage::getToId, userId);
+//        lq.eq(ChatMessage::getUserId, ((ChatUser)ThreadLocalUtil.get()).getId());
         List<ChatMessage> list = chatMessageService.list(lq);
         List<MessageVo> target = new ArrayList<>();
         ConverterRegistry converterRegistry = ConverterRegistry.getInstance();
