@@ -290,6 +290,7 @@
     let t;
     const token = `[[${token}]]`;
     let dialog;
+    const socketUrl = (document.location.protocol == "https:"  ? "wss" : "ws") + "://" + window.location.host + "/im/" + token;
     const app = Vue.createApp({
         data() {
             return {
@@ -552,7 +553,7 @@
             // 初始化websocket连接
             initWebsocket() {
                 // 创建WebSocket对象
-                socket = new WebSocket("ws://localhost:9089/im/" + token);
+                socket = new WebSocket(socketUrl);
 
                 // 连接成功时触发
                 socket.onopen = () => {
