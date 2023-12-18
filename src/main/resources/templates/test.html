@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>音频录制</title>
+</head>
+<body>
+<button id="startButton">开始录制</button>
+<button id="stopButton">停止录制</button>
+<button id="playButton">播放录制的音频</button>
+
+<script>
+    let mediaRecorder;
+    let recordedChunks = [];
+
+    const startButton = document.getElementById('startButton');
+    const stopButton = document.getElementById('stopButton');
+    const playButton = document.getElementById('playButton');
+
+    startButton.addEventListener('click', startRecording);
+    stopButton.addEventListener('click', stopRecording);
+    playButton.addEventListener('click', playRecording);
+
+    function startRecording() {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(function(stream) {
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.start();
+
+                mediaRecorder.addEventListener('dataavailable', function(e) {
+                    recordedChunks.push(e.data);
+                });
+            })
+            .catch(function(err) {
+                console.log('无法访问麦克风:', err);
+            });
+    }
+
+    function stopRecording() {
+        mediaRecorder.stop();
+
+        mediaRecorder.addEventListener('stop', function() {
+            const audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+
+            const uploadForm = new FormData();
+            uploadForm.append('audio', audioBlob, 'recorded_audio.webm');
+
+            fetch('/upload/audio', {
+                method: 'POST',
+                body: uploadForm
+            })
+                .then(function(response) {
+                    console.log('音频上传成功');
+                })
+                .catch(function(err) {
+                    console.log('音频上传失败:', err);
+                });
+        });
+    }
+
+    function playRecording() {
+        const audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        const audio = new Audio(audioUrl);
+        audio.play();
+    }
+</script>
+</body>
+</html>
