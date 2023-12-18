@@ -4,55 +4,59 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>用户注册</title>
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <!-- Import style -->
-    <link rel="stylesheet" href="/css/index.css" />
+    <link rel="stylesheet" href="/css/index.css"/>
     <!-- Import Vue 3 -->
     <script src="/js/vue.global.js"></script>
     <!-- Import component library -->
     <script src="/js/index.full.js"></script>
     <script src="/js/axios.min.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background-color: #f4f4f4;
-        }
-    </style>
-</head>
-<body>
 
-<div id="registerApp" style="width: 50%; max-width: 520px;">
-    <el-container>
-        <el-main class="register-container">
-            <el-card>
-                <h2 class="title">用户注册</h2>
-                <el-form :model="registerForm" :rules="registerRules" ref="registerForm" label-position="top">
-                    <el-form-item label="用户名" prop="username">
-                        <el-input v-model="registerForm.username" autocomplete="off" clearable></el-input>
-                    </el-form-item>
-                    <el-form-item label="密码" prop="password">
-                        <el-input type="password" v-model="registerForm.password" autocomplete="off" clearable></el-input>
-                    </el-form-item>
-                    <el-form-item label="验证码" prop="captcha" class="captcha-container">
-                        <el-input v-model="registerForm.captcha" autocomplete="off" style="width: 75%;" clearable></el-input>
-                        <el-image class="captcha-image" :src="captchaImageUrl" style="width: 25%; height: 32px;" @click="refreshCaptcha"></el-image>
-                    </el-form-item>
-                    <el-form-item>
-                        <el-button type="primary" @click="register">注册</el-button>
-                        <a href="/login" style="margin-left: 2rem;">去登录</a>
-                    </el-form-item>
-                </el-form>
-            </el-card>
-        </el-main>
-    </el-container>
+</head>
+<body class="flex items-center justify-center min-h-screen" style="background-image: url('/images/IMchart_bag.png'); background-size: cover;">
+
+<div id="registerApp" class="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
+    <h2 class="text-2xl font-bold text-center text-gray-700 mb-6">IMchat 聊天室</h2>
+    <form id="registerForm" @submit.prevent="register" class="space-y-4">
+        <div class="relative">
+            <i class="fas fa-user absolute text-gray-400 left-3 top-3"></i>
+            <input type="text" id="username" v-model="registerForm.username" required
+                   class="w-full mt-1 p-2 pl-10 border rounded-lg focus:ring focus:ring-opacity-50"
+                   placeholder="用户名">
+        </div>
+        <div class="relative">
+            <i class="fas fa-lock absolute text-gray-400 left-3 top-3"></i>
+            <input type="password" id="password" v-model="registerForm.password" required
+                   class="w-full mt-1 p-2 pl-10 border rounded-lg focus:ring focus:ring-opacity-50"
+                   placeholder="密码">
+        </div>
+        <div class="flex items-center">
+            <div class="w-3/4 relative">
+                <input type="text" id="captcha" v-model="registerForm.captcha" required
+                       class="w-full mt-1 p-2 pl-10 border rounded-lg focus:ring focus:ring-opacity-50"
+                       placeholder="验证码">
+                <i class="fas fa-shield-alt absolute text-gray-400 left-3 top-3"></i>
+            </div>
+            <div class="w-1/4 ml-2">
+                <img :src="captchaImageUrl" alt="captcha" class="w-full h-14 cursor-pointer" @click="refreshCaptcha">
+            </div>
+        </div>
+        <button type="submit"
+                class="w-full mt-4 bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 focus:outline-none focus:shadow-outline">
+            <i class="fas fa-user-plus mr-2"></i>注册
+        </button>
+        <div class="text-center mt-4">
+            <a href="/login" class="text-blue-600 hover:text-blue-500">去登录</a>
+        </div>
+    </form>
 </div>
 
 <script>
-    const { ElMessage } = ElementPlus;
+    const {ElMessage} = ElementPlus;
     const app = Vue.createApp({
         data() {
             return {
@@ -62,9 +66,9 @@
                     captcha: ''
                 },
                 registerRules: {
-                    username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-                    password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
-                    captcha: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
+                    username: [{required: true, message: '请输入用户名', trigger: 'blur'}],
+                    password: [{required: true, message: '请输入密码', trigger: 'blur'}],
+                    captcha: [{required: true, message: '请输入验证码', trigger: 'blur'}]
                 },
                 captchaImageUrl: '/captcha'
             };

@@ -5,50 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>用户登录</title>
     <!-- Import style -->
-    <link rel="stylesheet" href="/css/index.css" />
+    <link rel="stylesheet" href="/css/index.css"/>
     <!-- Import Vue 3 -->
     <script src="/js/vue.global.js"></script>
     <!-- Import component library -->
     <script src="/js/index.full.js"></script>
     <script src="/js/axios.min.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background-color: #f4f4f4;
-        }
-    </style>
-</head>
-<body>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 
-<div id="loginApp" style="width: 50%; max-width: 520px;">
-    <el-container>
-        <el-main class="login-container">
-            <el-card>
-                <h2 class="title">用户登录</h2>
-                <el-form :model="loginForm" :rules="loginRules" ref="loginForm" label-position="top">
-                    <el-form-item label="用户名" prop="username">
-                        <el-input v-model="loginForm.username" autocomplete="off" clearable></el-input>
-                    </el-form-item>
-                    <el-form-item label="密码" prop="password">
-                        <el-input type="password" v-model="loginForm.password" autocomplete="off" clearable></el-input>
-                    </el-form-item>
-                    <el-form-item>
-                        <el-button type="primary" @click="login">登录</el-button>
-                        <a href="/register" style="margin-left: 2rem;">去注册</a>
-                    </el-form-item>
-                </el-form>
-            </el-card>
-        </el-main>
-    </el-container>
+</head>
+<body class="min-h-screen bg-gradient-to-r from-purple-800 to-blue-800 flex items-center justify-center">
+<div id="loginApp" class="bg-white rounded-lg shadow-lg p-8 m-4 w-full max-w-sm">
+    <div class="flex justify-center mb-4">
+        <img src="/images/IMchart_log.png" alt="Imchat Logo" class="h-12">
+    </div>
+    <h2 class="text-2xl font-bold text-center text-gray-700 mb-8">IMchart 聊天室</h2>
+    <form id="loginForm" @submit.prevent="login">
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="username">
+                用户名
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                   id="username" type="text" placeholder="用户名" v-model="loginForm.username">
+        </div>
+        <div class="mb-6">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+                密码
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                   id="password" type="password" placeholder="**********" v-model="loginForm.password">
+        </div>
+        <div>
+            <button class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 focus:outline-none focus:shadow-outline flex items-center justify-center">
+                <i class="fas fa-sign-in-alt mr-2"></i>登录
+            </button>
+        </div>
+        <p class="mt-6 text-center text-sm leading-5 text-gray-600">
+            还没有账户？
+            <a href="/register"
+               class="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:underline">
+                注册
+            </a>
+        </p>
+    </form>
 </div>
 
 <script>
-    const { ElMessage } = ElementPlus;
+    const {ElMessage} = ElementPlus;
     const app = Vue.createApp({
         data() {
             return {
@@ -57,42 +61,37 @@
                     password: ''
                 },
                 loginRules: {
-                    username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-                    password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+                    username: [{required: true, message: '请输入用户名', trigger: 'blur'}],
+                    password: [{required: true, message: '请输入密码', trigger: 'blur'}]
                 }
             };
         },
         methods: {
             login() {
-                this.$refs.loginForm.validate(valid => {
-                    if (valid) {
-                        // 处理登录逻辑
-                        // 开始请求
-                        axios({
-                            method: 'post',
-                            url: `/login`,
-                            data: this.loginForm,
-                        }).then(res => {
-                            if (res.data.code == 200) {
-                                ElMessage({
-                                    message: '登录成功',
-                                    type: 'success',
-                                    duration: 1500,
-                                    onClose: () => {
-                                        // 跳转到主页
-                                        window.location.href = "/";
-                                    }
-                                })
-                                console.log(res.data);
-                            } else {
-                                ElMessage({
-                                    message: '登录失败:' + res.data.message,
-                                    type: 'error',
-                                })
-                                // 刷新验证码
-                                this.refreshCaptcha();
+                // 处理登录逻辑
+                axios({
+                    method: 'post',
+                    url: '/login',
+                    data: this.loginForm,
+                }).then(res => {
+                    if (res.data.code == 200) {
+                        ElMessage({
+                            message: '登录成功',
+                            type: 'success',
+                            duration: 1500,
+                            onClose: () => {
+                                // 跳转到主页
+                                window.location.href = "/";
                             }
                         });
+                        console.log(res.data);
+                    } else {
+                        ElMessage({
+                            message: '登录失败:' + res.data.message,
+                            type: 'error',
+                        });
+                        // 可以在此处处理验证码刷新逻辑
+                        this.refreshCaptcha();
                     }
                 });
             }

@@ -12,246 +12,158 @@
     <!-- Import component library -->
     <script src="/js/index.full.js"></script>
     <script src="/js/axios.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        body {
-            margin: 0;
-            font-family: 'Arial', sans-serif;
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
-        #app {
-            display: flex;
-            height: 100vh;
+        .animate-fadeIn {
+            animation: fadeIn 2s ease-in-out;
         }
 
-        .room-list {
-            width: 25%;
-            min-width: 200px;
-            background-color: #f0f0f0;
-            padding: 20px;
-            overflow-y: auto;
+        .delay-2s {
+            animation-delay: 2s;
         }
-
-        .room-list h2 {
-            font-size: 1.5rem;
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .room-list ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        .room-list li {
-            cursor: pointer;
-            padding: 10px;
-            margin-bottom: 5px;
-            background-color: #fff;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-        }
-
-        .room-list li:hover {
-            background-color: #e0e0e0;
-        }
-
-        .chat-window {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            position: relative;
-        }
-
-        .message-container {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            max-height: 85%;
-            overflow-y: auto; /* Add this line to enable vertical scrollbar */
-        }
-
-        .message {
-            max-width: 70%;
-            margin-bottom: 10px;
-            padding: 10px;
-            border-radius: 10px;
-        }
-
-        .my-message {
-            align-self: flex-end;
-            background-color: #95d475;
-            color: #fff;
-        }
-
-        .other-message {
-            align-self: flex-start;
-            background-color: #fff;
-            border: 1px solid #ccc;
-        }
-
-        .message strong {
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .timestamp {
-            font-size: 0.8rem;
-            color: #777;
-        }
-
-        .message strong {
-            color: #333;
-        }
-
-        .input-container {
-            width: 100%;
-            display: flex;
-            padding: 10px;
-            box-sizing: border-box; /* Added box-sizing */
-            background-color: #fff;
-            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-            position: absolute;
-            bottom: 0;
-        }
-
-        .input-box {
-            flex: 1;
-            margin-right: 10px;
-        }
-
-        .send-button {
-            background-color: #409EFF;
-            color: #fff;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .send-button:hover {
-            background-color: #3080E8;
-        }
-
-        .sidebar-footer {
-            margin-top: auto;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .sidebar-footer a {
-            margin-top: 10px;
-            padding: 5px 10px;
-            background-color: #409EFF;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-        }
-
-        .sidebar-footer a:hover {
-            background-color: #3080E8;
-        }
-
-        dialog {
-            width: 400px;
-            height: 330px;
-            border: 1px solid #f0f0f0;
-            border-radius: 20px;
-        }
-
-        .content {
-            width: 100%;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
     </style>
 </head>
-<body>
-<div id="app">
-    <div class="room-list">
-        <h2>房间列表</h2>
-        <ul>
-            <li v-for="(room, index) in roomList" :key="index" @click="selectRoom(room.id)">
-                {{ room.name }}({{room.limitNum}}人)--By:{{room.masterName}}
-            </li>
-        </ul>
-
-        <div class="sidebar-footer">
-            <a href="#" @click="createRoom">创建房间</a>
-            <a href="#" @click="refreshRoomList">刷新房间列表</a>
-            <a th:href="@{/friend}">好友聊天</a>
-            <a href="#" @click="logout">退出登录</a>
+<body class="bg-gray-100">
+<div id="app" class="flex h-screen overflow-hidden">
+    <div class="bg-white w-64 border-r border-gray-200 flex flex-col">
+        <div class="flex items-center justify-center h-20 shadow">
+            <img src="/images/IMchart_log.png" alt="IMchat Logo" class="h-12">
+        </div>
+        <nav class="flex-1 px-2 py-4 overflow-y-auto text-gray-800">
+            <h2 class="text-lg text-gray-700 font-semibold">房间列表</h2>
+            <ul>
+                <li v-for="(room, index) in roomList" :key="index" @click="selectRoom(room.id)"
+                    class="flex items-center p-2 mt-2 bg-gray-100 rounded-lg cursor-pointer hover:bg-purple-200 hover:text-white transition-colors">
+                    {{ room.name }} ({{ room.limitNum }}人) -- By: {{ room.masterName }}
+                </li>
+            </ul>
+        </nav>
+        <div class="mt-auto bg-gray-50 p-4">
+            <button @click="createRoom"
+                    class="w-full flex items-center justify-start px-4 py-2 hover:bg-purple-200 transition-colors">
+                <i class="fas fa-plus-circle mr-2"></i> 创建房间
+            </button>
+            <button @click="refreshRoomList"
+                    class="w-full flex items-center justify-start px-4 py-2 hover:bg-purple-200 transition-colors">
+                <i class="fas fa-sync-alt mr-2"></i> 刷新房间列表
+            </button>
+            <button onclick="window.location.href='/friend'"
+                    class="w-full flex items-center justify-start px-4 py-2 hover:bg-purple-200 transition-colors">
+                <i class="fas fa-users mr-2"></i> 用户聊天
+            </button>
+            <button @click="logout"
+                    class="w-full flex items-center justify-start px-4 py-2 hover:bg-purple-200 transition-colors">
+                <i class="fas fa-sign-out-alt mr-2"></i> 退出登录
+            </button>
         </div>
     </div>
 
-    <div class="chat-window">
-        <h2>{{ currentRoomName }} <el-button v-if="currentRoom != 0 && currentRoomName != '请选择房间'" class="send-button" @click="leaveRoom" style="float:right;background-color: darkred;">退出群聊</el-button></h2>
-        <div class="message-container">
-            <div v-for="(message, index) in chatMessages" :key="index" class="message"
-                 :class="{ 'my-message': message.userId === currentUserId, 'other-message': message.userId !== currentUserId }">
-                <strong>{{ message.userName }}</strong>
-                <div v-if="message.type != 0">
-                    <p v-html="message.content"></p>
-                </div>
-                <div v-else>
-                    <p>{{message.content}}</p>
-                </div>
-                <div class="timestamp">{{ message.createTime }}</div>
+    <div class="flex-1 flex flex-col">
+        <header class="flex items-center justify-between p-4 bg-white border-b">
+            <h2 class="text-xl font-semibold">{{ currentRoomName }}</h2>
+            <button v-if="currentRoom != 0 && currentRoomName != '请选择房间'" @click="leaveRoom"
+                    class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 focus:outline-none">退出群聊
+            </button>
+        </header>
+
+        <!-- 欢迎页 -->
+        <div v-if="!isChatSelected" class="text-center mt-10">
+            <h3 class="text-lg font-semibold mt-4 animate-pulse">欢迎来到IM聊天室</h3>
+            <img src="/images/IMchart_wel.png" alt="IMchat Logo" class="mx-auto h-24">
+            <p class="mt-2 animate-fadeIn">在这里，你可以与朋友进行实时交流。</p>
+            <p class="mt-2 animate-fadeIn delay-2s">请从左侧菜单选择一个房间或好友开始聊天。</p>
+            <div class="animate-bounce mt-6">
+        <span class="text-blue-500">
+            <i class="fas fa-chevron-down"></i>
+        </span>
             </div>
         </div>
-        <div class="input-container" style="margin-left: -20px;">
-            <el-input class="input-box" :autosize="{ minRows: 1, maxRows: 10 }"
-                      type="textarea" v-model="newMessage" placeholder="请输入你的消息内容"></el-input>
-            <el-button class="send-button" @click="sendMessage">发送</el-button>
-            <el-button class="send-button" @click="startRecording">开始录音</el-button>
-            <el-button class="send-button" @click="stopRecording">停止录音</el-button>
+
+        <div class="flex-1 p-4 overflow-y-auto">
+            <div v-for="(message, index) in chatMessages" :key="index" v-if="isChatSelected"
+                 class="p-4 max-w-xl my-2 rounded shadow"
+                 :class="{ 'bg-blue-300 ml-auto': message.userId === currentUserId, 'bg-gray-100 mr-auto': message.userId !== currentUserId }">
+                <strong>{{ message.userName }}</strong>
+                <p v-html="message.content"></p>
+                <div class="text-sm text-gray-600">{{ message.createTime }}</div>
+            </div>
+        </div>
+        <!-- 底部消息发送栏 -->
+        <div class="p-4 bg-white border-t flex space-x-4" v-if="isChatSelected">
+            <input type="text" class="flex-1 border p-2 rounded-l focus:outline-none" v-model="newMessage"
+                   placeholder="请输入你的消息内容">
+            <button @click="sendMessage"
+                    class="bg-purple-500 text-white px-4 py-2 rounded-r focus:outline-none hover:bg-purple-600">发送
+            </button>
+            <button @click="startRecording"
+                    class="bg-red-500 text-white px-4 py-2 rounded focus:outline-none hover:bg-red-600">录音
+            </button>
+            <button @click="stopRecording"
+                    class="bg-green-500 text-white px-4 py-2 rounded focus:outline-none hover:bg-green-600">停止
+            </button>
         </div>
     </div>
 
-    <dialog id="create-dialog">
-        <h2>创建房间</h2>
+    <dialog id="create-dialog" class="p-8 rounded-lg shadow-lg">
+        <h2 class="text-lg font-semibold mb-4">创建房间</h2>
         <div class="content">
-            <el-form>
-                <el-form-item label="房间名">
-                    <el-input v-model="roomObj.name" placeholder="房间名"></el-input>
-                </el-form-item>
-
-                <el-form-item label="房间密码">
-                    <el-input v-model="roomObj.pass" placeholder="密码"></el-input>
-                </el-form-item>
-
-                <el-form-item label="人数限制">
-                    <el-input v-model="roomObj.limitNum" placeholder="最多加入人数(至少2个)"></el-input>
-                </el-form-item>
-
-                <el-form-item>
-                    <el-button type="primary" @click="submitForm">确定创建</el-button>
-                    <el-button @click="closePopup">关闭</el-button>
-                </el-form-item>
-            </el-form>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="room-name">房间名</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                       id="room-name" type="text" placeholder="房间名" v-model="roomObj.name">
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="room-password">房间密码</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                       id="room-password" type="password" placeholder="密码" v-model="roomObj.pass">
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="room-limit">人数限制</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                       id="room-limit" type="number" placeholder="最多加入人数(至少2个)" v-model="roomObj.limitNum">
+            </div>
+            <div class="flex justify-end">
+                <button @click="submitForm"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mr-2">
+                    确定创建
+                </button>
+                <button @click="closePopup"
+                        class="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    关闭
+                </button>
+            </div>
         </div>
     </dialog>
 
-    <dialog id="join-dialog">
-        <h2>加入房间</h2>
+    <dialog id="join-dialog" class="p-8 rounded-lg shadow-lg">
+        <h2 class="text-lg font-semibold mb-4">加入房间</h2>
         <div class="content">
-            <el-form>
-                <el-form-item label="房间名">
-                    <el-input v-model="roomObj.name" placeholder="房间名" :readonly="true"></el-input>
-                </el-form-item>
-
-                <el-form-item label="房间密码">
-                    <el-input v-model="roomObj.pass" placeholder="密码"></el-input>
-                </el-form-item>
-
-                <el-form-item>
-                    <el-button type="primary" @click="joinRoom">进入</el-button>
-                    <el-button @click="closePopup">关闭</el-button>
-                </el-form-item>
-            </el-form>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="join-room-name">房间名</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                       id="join-room-name" type="text" placeholder="房间名" v-model="roomObj.name" :readonly="true">
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="join-room-password">房间密码</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                       id="join-room-password" type="password" placeholder="密码" v-model="roomObj.pass">
+            </div>
+            <div class="flex justify-end">
+                <button @click="joinRoom"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mr-2">
+                    进入
+                </button>
+                <button @click="closePopup"
+                        class="bg-gray-300 hover:bg-gray-400 text-black font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    关闭
+                </button>
+            </div>
         </div>
     </dialog>
 </div>
@@ -279,6 +191,7 @@
         function addZero(num) {
             return num < 10 ? '0' + num : num;
         }
+
         return formattedDate;
     }
 
@@ -290,11 +203,11 @@
     let t;
     const token = `[[${token}]]`;
     let dialog;
-    const socketUrl = (document.location.protocol == "https:"  ? "wss" : "ws") + "://" + window.location.host + "/im/" + token;
+    const socketUrl = (document.location.protocol == "https:" ? "wss" : "ws") + "://" + window.location.host + "/im/" + token;
     const app = Vue.createApp({
         data() {
             return {
-                myRoomList:[[${my_room_list}]],
+                myRoomList: [[${my_room_list}]],
                 roomObj: {
                     id: 0,
                     name: "",
@@ -306,12 +219,12 @@
                 currentRoomName: '请选择房间',
                 currentUserId: [[${user_id}]],
                 currentUser: '[[${user}]]',
-                chatMessages: [
-                ],
+                chatMessages: [],
                 newMessage: '',
                 isPopupVisible: false,
                 mediaRecorder: null,
                 recordedChunks: [],
+                isChatSelected: false
             };
         },
         methods: {
@@ -328,6 +241,7 @@
                 dialog = document.getElementById("join-dialog");
                 dialog.showModal();
 
+                this.isChatSelected = true
                 // this.currentRoom = roomId;
                 // this.currentRoomName = this.roomList.find(room => room.id === roomId).name;
                 //
@@ -612,7 +526,7 @@
                 }
 
                 // 连接关闭时触发
-                socket.onclose = (e) =>  {
+                socket.onclose = (e) => {
                     ElMessage({
                         message: '与通信服务器断开连接',
                         type: 'error',
@@ -658,7 +572,7 @@
                 // 10秒发送一次心跳
                 t = setInterval(() => {
                     socket.send("hearting")
-                },10000);
+                }, 10000);
             },
             // 退群
             leaveRoom() {
